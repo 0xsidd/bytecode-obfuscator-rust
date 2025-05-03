@@ -5,6 +5,7 @@ pub struct Push_Positions {
     pub byteoffset_decimal: i32,
     pub byteoffset_hex: String,
     pub instruction_position: i32,
+    pub instruction_bits: String,
     pub value_decimal: i32,
     pub value_hex: String,
     pub next_instruction_code: String,
@@ -39,6 +40,7 @@ pub fn find_jump_seq(bytecode: &String) -> Vec<Push_Positions> {
                 &current_instruction,
                 &next_instruction,
                 &instruction_position,
+                &current_instruction,
                 &index,
                 &current_params,
             );
@@ -58,6 +60,7 @@ fn check_push_jump_seq(
     current_instruction: &String,
     next_instruction: &String,
     ins_position: &i32,
+    ins_bits: &String,
     push_index: &usize,
     push_value: &String,
 ) -> Option<Push_Positions> {
@@ -76,6 +79,7 @@ fn check_push_jump_seq(
             byteoffset_decimal: *push_index as i32,
             byteoffset_hex: format!("{:x}", push_index),
             instruction_position: ins_position.clone(),
+            instruction_bits: ins_bits.clone(),
             value_decimal,
             value_hex,
             next_instruction_code: current_instruction.clone(),

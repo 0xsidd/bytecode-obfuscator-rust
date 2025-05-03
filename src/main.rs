@@ -16,8 +16,8 @@ mod analysis {
 use constant::opcodes::{get_opcode_name, get_opcode_size};
 
 use helper::bytecode::{
-    append_jumpdest, append_push_jump, get_appended_jumpdest_pos, get_instruction_count,
-    get_random_dead_bytecode, modify_push_val,
+    self, append_jumpdest, append_push_jump, get_dead_bytecode, get_instruction_count,
+    get_last_instruction_position, modify_push_val,
 };
 
 use analysis::jump_seq::{Push_Positions, find_jump_seq};
@@ -45,14 +45,10 @@ fn main() {
     00
     */
 
-    // 1) Append JUMPDEST at the end
-
-    // Append jumpdest at the end of the bytecode
-    append_jumpdest(&mut bytecode);
     // chech if jumpdest has appended
     // println!("jumpdest has appended {}", bytecode);
 
-    // 2) Get all PUSH-JUMP sequence
+    // 1) Get all PUSH-JUMP sequence
 
     let push_jump_seq: Vec<Push_Positions> = find_jump_seq(&bytecode);
 
@@ -60,31 +56,38 @@ fn main() {
     // println!("push-jump seq: {:?}", push_jump_seq);
 
     // 3) For each sequence, change the push's param to the newly added JUPDEST's instruction position
-
     // iterate over all the push-jump seq
 
     for push_jump in &push_jump_seq {
+        // 2a) Append JUMPDEST at the end
+
+        // Append jumpdest at the end of the bytecode
+        append_jumpdest(&mut bytecode);
+
         // get original jumpdest's position
         let ideal_jumpdest_position: String = push_jump.value_hex.clone();
 
         // get the byteoffset of appended JUMPDEST
-        let appended_jumpdest_pos = get_appended_jumpdest_pos(&bytecode);
-        println!("total instructions are: {}", appended_jumpdest_pos);
+        let appended_jumpdest_pos: i32 = get_last_instruction_position(&bytecode);
 
         // now change the push value to the newly added JUMPDEST's instruction position
         modify_push_val(
             &mut bytecode,
             push_jump.byteoffset_decimal,
-            &appended_jumpdest_pos,
+            appended_jumpdest_pos,
+            &push_jump.instruction_bits,
         );
 
-        println!("Modified bytecode is {}", bytecode);
+        // println!("Modified bytecode is {}", bytecode);
 
-        // 3a)
+        // 2b) Generate dead bytecode with correct push values
 
-        // 3b)
+        let last_ins_position: i32 = get_last_instruction_position(&bytecode);
+        let dead_bytecode: String = get_dead_bytecode(last_ins_position);
+        bytecode = bytecode.clone() + &dead_bytecode;
+        // 2c)
 
-        // 3c) append push-jump at the end jumping to the original JUMPDEST
+        // 2d) append push-jump at the end jumping to the original JUMPDEST
         append_push_jump(&mut bytecode, ideal_jumpdest_position);
         println!("Obfuscated Bytecode: {}", bytecode);
 
@@ -94,10 +97,10 @@ fn main() {
 }
 
 /*  OBFUSCATION STEPS
-1) append jump dest at the end of the bytecode
-2) check for the push-jump seq
-3) for each push-jump, change the push's parameter to newly appended jumpdest
-    3a) generate dead bytecode and fix the push-jump param according to the total instructions in the bytecode
-    3b) append deadbytecode at the end
-    3c) append push-jump with correct push value pointing to original jumpdest location.
+1) check for the push-jump seq
+2) for each push-jump, change the push's parameter to newly appended jumpdest
+    2a) append jump dest at the end of the bytecode
+    2b) generate dead bytecode and fix the push-jump param according to the total instructions in the bytecode
+    2c) append deadbytecode at the end
+    2d) append push-jump with correct push value pointing to original jumpdest location.
 */
