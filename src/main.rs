@@ -1,106 +1,13 @@
-use std::process;
+#![allow(warnings)]
 
-// Declare the folder and file as modules
-mod constant {
-    pub mod opcodes;
-}
-
-mod helper {
-    pub mod bytecode;
-}
-
-mod analysis {
-    pub mod jump_seq;
-}
-
-use constant::opcodes::{get_opcode_name, get_opcode_size};
-
-use helper::bytecode::{
-    self, append_jumpdest, append_push_jump, get_dead_bytecode, get_instruction_count,
-    get_last_instruction_position, modify_push_val,
-};
-
-use analysis::jump_seq::{Push_Positions, find_jump_seq};
+use obfuscator_rs::obfuscation::obfuscate::obfuscate;
 
 fn main() {
-    let mut bytecode: String = String::from("6042600a5652602060005b0033602f01601656003360ff5b00");
-    /*
-    6042
-    600a 2
-    56
-    52
-    6020
-    6000
-    5b
-    00
-    33
-    602f
-    01
-    6016 12
-    56
-    00
-    33
-    60ff
-    5b
-    00
-    */
+    let mut bytecode: String = String::from(
+        "0x608060405234801561000f575f5ffd5b5060043610610034575f3560e01c806361bc221a146100385780637cf5dab014610056575b5f5ffd5b610040610086565b60405161004d91906100d0565b60405180910390f35b610070600480360381019061006b9190610117565b61008b565b60405161007d91906100d0565b60405180910390f35b5f5481565b5f610095826100a3565b5f819055505f549050919050565b5f6001826100b1919061016f565b9050919050565b5f819050919050565b6100ca816100b8565b82525050565b5f6020820190506100e35f8301846100c1565b92915050565b5f5ffd5b6100f6816100b8565b8114610100575f5ffd5b50565b5f81359050610111816100ed565b92915050565b5f6020828403121561012c5761012b6100e9565b5b5f61013984828501610103565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f610179826100b8565b9150610184836100b8565b925082820190508082111561019c5761019b610142565b5b9291505056fea26469706673582212207465c1bf303ab75859adcc7648cdac57c38111df034a0070d32c8a028d4cc77264736f6c634300081b0033",
+    );
 
-    // chech if jumpdest has appended
-    // println!("jumpdest has appended {}", bytecode);
+    obfuscate(&mut bytecode);
 
-    // 1) Get all PUSH-JUMP sequence
-
-    let push_jump_seq: Vec<Push_Positions> = find_jump_seq(&bytecode);
-
-    // log all the push-jump sequences
-    // println!("push-jump seq: {:?}", push_jump_seq);
-
-    // 3) For each sequence, change the push's param to the newly added JUPDEST's instruction position
-    // iterate over all the push-jump seq
-
-    for push_jump in &push_jump_seq {
-        // 2a) Append JUMPDEST at the end
-
-        // Append jumpdest at the end of the bytecode
-        append_jumpdest(&mut bytecode);
-
-        // get original jumpdest's position
-        let ideal_jumpdest_position: String = push_jump.value_hex.clone();
-
-        // get the byteoffset of appended JUMPDEST
-        let appended_jumpdest_pos: i32 = get_last_instruction_position(&bytecode);
-
-        // now change the push value to the newly added JUMPDEST's instruction position
-        modify_push_val(
-            &mut bytecode,
-            push_jump.byteoffset_decimal,
-            appended_jumpdest_pos,
-            &push_jump.instruction_bits,
-        );
-
-        // println!("Modified bytecode is {}", bytecode);
-
-        // 2b) Generate dead bytecode with correct push values
-
-        let last_ins_position: i32 = get_last_instruction_position(&bytecode);
-        let dead_bytecode: String = get_dead_bytecode(last_ins_position);
-        bytecode = bytecode.clone() + &dead_bytecode;
-        // 2c)
-
-        // 2d) append push-jump at the end jumping to the original JUMPDEST
-        append_push_jump(&mut bytecode, ideal_jumpdest_position);
-        println!("Obfuscated Bytecode: {}", bytecode);
-
-        //exit the process
-        process::exit(1);
-    }
+    println!("Obfuscated Bytecode is: {}", bytecode);
 }
-
-/*  OBFUSCATION STEPS
-1) check for the push-jump seq
-2) for each push-jump, change the push's parameter to newly appended jumpdest
-    2a) append jump dest at the end of the bytecode
-    2b) generate dead bytecode and fix the push-jump param according to the total instructions in the bytecode
-    2c) append deadbytecode at the end
-    2d) append push-jump with correct push value pointing to original jumpdest location.
-*/

@@ -1,3 +1,5 @@
+use std::io::Bytes;
+
 use crate::analysis::jump_seq;
 use crate::constant::opcodes;
 
@@ -6,44 +8,18 @@ use rand::Rng;
 // function to append JUMP dest at the end of the bytecode
 
 pub fn append_jumpdest(bytecode: &mut String) -> &mut String {
-    let jumpdest_bytecode = String::from("5b");
+    let jumpdest_bytecode: String = String::from("5b");
     bytecode.push_str(&jumpdest_bytecode);
     return bytecode;
 }
 
 pub fn append_push_jump<'a>(bytecode: &'a mut String, jump_to: String) -> &'a mut String {
-    let mut jump_to_padded: String = jump_to;
-    if jump_to_padded.len() == 1 {
-        jump_to_padded = format!("000{}", jump_to_padded);
-    } else if jump_to_padded.len() == 2 {
-        jump_to_padded = format!("00{}", jump_to_padded);
-    } else if jump_to_padded.len() == 3 {
-        jump_to_padded = format!("0{}", jump_to_padded);
-    }
-    let push_jump_bytecode: String = String::from("61") + &jump_to_padded + &String::from("56");
+    let padded_hex_val: String = pad_hex_val(String::from("61"), jump_to);
+    let push1_bits: String = String::from("61");
+    let jump_bits: String = String::from("56");
+    let push_jump_bytecode: String = format!("{}{}{}", push1_bits, padded_hex_val, jump_bits);
     bytecode.push_str(&push_jump_bytecode);
     return bytecode;
-}
-
-// function to get total instructions count in the bytecode
-pub fn get_instruction_count(bytecode: &String) -> i32 {
-    let mut skip_to_index: i32 = 0;
-    let mut instruction_position: i32 = 0;
-
-    for (index, _) in bytecode.chars().enumerate() {
-        if index as i32 == skip_to_index && index % 2 == 0 {
-            let current_instruction = bytecode[index..index + 2].to_string();
-
-            let current_instruction_size: i32 =
-                opcodes::get_opcode_size(&current_instruction).unwrap() as i32;
-
-            skip_to_index = index as i32 + current_instruction_size;
-
-            instruction_position += 1;
-        }
-    }
-
-    return instruction_position - 1;
 }
 
 // function returns bte offset position of the last instruction
@@ -53,7 +29,7 @@ pub fn get_last_instruction_position(bytecode: &String) -> i32 {
 
     for (index, _) in bytecode.chars().enumerate() {
         if index as i32 == skip_to_index && index % 2 == 0 {
-            let current_instruction = bytecode[index..index + 2].to_string();
+            let current_instruction: String = bytecode[index..index + 2].to_string();
 
             let current_instruction_size: i32 =
                 opcodes::get_opcode_size(&current_instruction).unwrap() as i32;
@@ -99,7 +75,7 @@ fn pick_random_dead_bytecode() -> String {
             "61000b566005600601505b6017601801506019601a0250601b601c0350601d601e0450600060011460f757",
         ),
     ];
-    let mut rng = rand::rng();
+    let mut rng: rand::prelude::ThreadRng = rand::rng();
     let random_number: u32 = rng.random_range(1..=dead_bytecodes.len() as u32 - 1); // inclusive range 1–100
     return dead_bytecodes[random_number as usize].clone();
 }
@@ -109,20 +85,15 @@ pub fn modify_push_val<'a>(
     bytecode: &'a mut String,
     push_byte_offset: i32,
     replacement_value: i32,
-    instruction: &String
+    instruction: &String,
 ) -> &'a mut String {
-    let offset = push_byte_offset as usize;
-    let opcode = bytecode[offset..offset + 2].to_string();
-    let opcode_size = opcodes::get_opcode_size(&opcode).unwrap() as i32;
-    let replacement_val_hex = format!("{:x}", replacement_value);
-    let padded_hex_val = pad_hex_val(instruction.clone(),replacement_val_hex);
+    let offset: usize = push_byte_offset as usize;
+    let opcode: String = bytecode[offset..offset + 2].to_string();
+    let opcode_size: i32 = opcodes::get_opcode_size(&opcode).unwrap() as i32;
+    let replacement_val_hex: String = format!("{:x}", replacement_value);
+    let padded_hex_val: String = pad_hex_val(instruction.clone(), replacement_val_hex);
 
-    // println!("Replacement value in hex is {}", padded_hex_val);
-
-    bytecode.replace_range(
-        offset + 2..offset + opcode_size as usize,
-        &padded_hex_val,
-    );
+    bytecode.replace_range(offset + 2..offset + opcode_size as usize, &padded_hex_val);
 
     return bytecode;
 }
@@ -130,11 +101,15 @@ pub fn modify_push_val<'a>(
 // funciton to generate a dead bytecode with fixed push values
 pub fn get_dead_bytecode(last_ins_position: i32) -> String {
     // Pick random bytecode from the array
-    let mut dead_bytecode = pick_random_dead_bytecode();
+    let mut dead_bytecode: String = pick_random_dead_bytecode();
+
     println!("selected dead bytecode: {}", dead_bytecode);
+    println!(
+        "##################################################################################################################"
+    );
 
     // get push-jump sequences from the bytecode
-    let push_jump_seq = jump_seq::find_jump_seq(&dead_bytecode);
+    let push_jump_seq: Vec<jump_seq::PushPositions> = jump_seq::find_jump_seq(&dead_bytecode);
 
     // now for each push-jump sequence change the default position to existing bytecode's last instruction + the default one
     for push_jump in push_jump_seq {
@@ -146,11 +121,8 @@ pub fn get_dead_bytecode(last_ins_position: i32) -> String {
             &mut dead_bytecode,
             push_jump.byteoffset_decimal,
             updated_push_dest,
-            &push_jump.instruction_bits
+            &push_jump.instruction_bits,
         );
-
-        // check updated bytecode
-        println!("Push Updated dead bytecode is: {}", dead_bytecode);
     }
     return dead_bytecode;
 }
@@ -158,19 +130,26 @@ pub fn get_dead_bytecode(last_ins_position: i32) -> String {
 // for a given instruction, padd the hex value
 fn pad_hex_val(instruction: String, value: String) -> String {
     // get the size of the instruction in bytes
-    let mut ins_size_bytes = opcodes::get_opcode_size(&instruction).unwrap() as usize;
-    ins_size_bytes = ins_size_bytes/2;
+    let mut ins_size_bytes: usize = opcodes::get_opcode_size(&instruction).unwrap() as usize;
+    ins_size_bytes = ins_size_bytes / 2;
     // Calculate data size in hex characters (each byte = 2 hex chars)
     // Instruction byte size includes opcode (1 byte) and data
-    let data_size_bytes = ins_size_bytes - 1;  // Subtract 1 byte for opcode
-    let data_size_chars = data_size_bytes * 2; // Convert to hex characters
-    
+    let data_size_bytes: usize = ins_size_bytes - 1; // Subtract 1 byte for opcode
+    let data_size_chars: usize = data_size_bytes * 2; // Convert to hex characters
+
     // Pad the value with leading zeros if needed
     if value.len() < data_size_chars {
-        let padding_needed = data_size_chars - value.len();
+        let padding_needed: usize = data_size_chars - value.len();
         return "0".repeat(padding_needed) + &value;
     }
-    
+
     // Return original value if no padding needed
     return value;
+}
+
+pub fn rm_zero_x(bytecode: &mut String) -> &mut String {
+    if bytecode.starts_with("0x") {
+        bytecode.replace_range(0..2, ""); // remove 0x
+    }
+    bytecode
 }

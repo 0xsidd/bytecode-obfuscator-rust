@@ -154,13 +154,10 @@ fn get_opcode_names() -> HashMap<String, String> {
     ])
 }
 
-
 // get opcode's name
-pub fn get_opcode_name(opcode: &String) -> Option<String>{
+pub fn get_opcode_name(opcode: &String) -> Option<String> {
     get_opcode_names().get(opcode).cloned()
 }
-
-
 
 fn get_opcode_sizes() -> HashMap<String, i8> {
     HashMap::from([
@@ -258,7 +255,7 @@ fn get_opcode_sizes() -> HashMap<String, i8> {
         ("5b".to_string(), 2),
         ("5c".to_string(), 2),
         ("5d".to_string(), 2),
-        ("5e".to_string(), 2), 
+        ("5e".to_string(), 2),
         ("5f".to_string(), 2),
         ("60".to_string(), 4),
         ("61".to_string(), 6),
@@ -292,7 +289,6 @@ fn get_opcode_sizes() -> HashMap<String, i8> {
         ("7d".to_string(), 62),
         ("7e".to_string(), 64),
         ("7f".to_string(), 66),
-        
         ("80".to_string(), 2),
         ("81".to_string(), 2),
         ("82".to_string(), 2),
@@ -357,6 +353,6 @@ fn get_opcode_sizes() -> HashMap<String, i8> {
 pub fn get_opcode_size(opcode: &String) -> Option<i8> {
     match get_opcode_sizes().get(opcode) {
         Some(size) => Some(*size),
-        None => Some(2)
+        None => Some(2),
     }
 }
