@@ -2,15 +2,23 @@ use crate::analysis::jump_seq::{PushPositions, find_jump_seq};
 
 use crate::helper::bytecode::{
     append_jumpdest, append_push_jump, get_dead_bytecode, get_last_instruction_position,
-    modify_push_val,rm_zero_x
+    modify_push_val, rm_zero_x,
 };
 
-pub fn obfuscate(bytecode: &mut String) {
+/*  OBFUSCATION STEPS
+1) check for the push-jump seq
+2) for each push-jump, change the push's parameter to newly appended jumpdest
+    2a) append jump dest at the end of the bytecode
+    2b) generate dead bytecode and fix the push-jump param according to the total instructions in the bytecode
+    2c) append deadbytecode at the end
+    2d) append push-jump with correct push value pointing to original jumpdest location.
+*/
 
+pub fn obfuscate(bytecode: &mut String) {
     // Remove 0x from the start
 
     rm_zero_x(bytecode);
-    println!("0x removed: {}",bytecode);
+    println!("0x removed: {}", bytecode);
     // 1) Get all PUSH-JUMP sequence
     let push_jump_seq: Vec<PushPositions> = find_jump_seq(&bytecode.clone());
 
