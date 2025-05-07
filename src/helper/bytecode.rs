@@ -1,8 +1,5 @@
-use std::io::Bytes;
-
 use crate::analysis::jump_seq;
 use crate::constant::opcodes;
-
 use rand::Rng;
 
 // function to append JUMP dest at the end of the bytecode
@@ -75,6 +72,7 @@ fn pick_random_dead_bytecode() -> String {
             "61000b566005600601505b6017601801506019601a0250601b601c0350601d601e0450600060011460f757",
         ),
     ];
+
     let mut rng: rand::prelude::ThreadRng = rand::rng();
     let random_number: u32 = rng.random_range(1..=dead_bytecodes.len() as u32 - 1); // inclusive range 1–100
     return dead_bytecodes[random_number as usize].clone();
@@ -102,11 +100,6 @@ pub fn modify_push_val<'a>(
 pub fn get_dead_bytecode(last_ins_position: i32) -> String {
     // Pick random bytecode from the array
     let mut dead_bytecode: String = pick_random_dead_bytecode();
-
-    println!("selected dead bytecode: {}", dead_bytecode);
-    println!(
-        "##################################################################################################################"
-    );
 
     // get push-jump sequences from the bytecode
     let push_jump_seq: Vec<jump_seq::PushPositions> = jump_seq::find_jump_seq(&dead_bytecode);
@@ -152,4 +145,28 @@ pub fn rm_zero_x(bytecode: &mut String) -> &mut String {
         bytecode.replace_range(0..2, ""); // remove 0x
     }
     bytecode
+}
+
+pub fn get_instruction_at_index(bytecode: &String, ins_index: i32) -> Option<String> {
+    let mut skip_to_index: i32 = 0;
+    let mut instruction_position: i32 = 0;
+
+    // let mut jump_sequences: Vec<PushPositions> = Vec::new();
+
+    for (index, _) in bytecode.chars().enumerate() {
+        if index as i32 == skip_to_index && index % 2 == 0 {
+            let current_instruction: String = bytecode[index..index + 2].to_string();
+
+            let current_instruction_size: i32 =
+                opcodes::get_opcode_size(&current_instruction).unwrap() as i32;
+
+            skip_to_index = index as i32 + current_instruction_size;
+
+            instruction_position += 1;
+            if instruction_position == ins_index {
+                return Some(current_instruction);
+            }
+        }
+    }
+    return None;
 }
