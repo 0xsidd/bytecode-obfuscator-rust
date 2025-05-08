@@ -1,6 +1,6 @@
 use crate::analysis::code_type::seperate_bytecode;
 use crate::analysis::jump_seq::{PushPositions, find_jump_seq};
-use crate::analysis::push_codecopy_seq::update_init_push;
+use crate::analysis::push_codecopy_seq::update_runtime_offset;
 
 use crate::helper::bytecode::{
     append_jumpdest, append_push_jump, get_dead_bytecode, get_last_instruction_position,
@@ -18,13 +18,13 @@ use crate::helper::bytecode::{
 4) update runtime length in the initcode
 */
 
-pub fn obfuscate(bytecode: &mut String, max_iterations: usize) {
+pub fn obfuscate(creation_bytecode: &mut String, max_iterations: usize) {
     // Remove 0x from the start
-    rm_zero_x(bytecode);
+    rm_zero_x(creation_bytecode);
 
     // 1) seperate init code and runtime code
     let (init_code, mut runtime_bytecode) =
-        seperate_bytecode(&bytecode).unwrap_or_else(|| (String::new(), bytecode.clone()));
+        seperate_bytecode(&creation_bytecode).unwrap_or_else(|| (String::new(), creation_bytecode.clone()));
 
     // 2) Get all PUSH-JUMP sequence
     let push_jump_seq: Vec<PushPositions> = find_jump_seq(&runtime_bytecode.clone());
@@ -65,11 +65,11 @@ pub fn obfuscate(bytecode: &mut String, max_iterations: usize) {
     }
 
     // concatenate init code and runtime code
-    bytecode.clear();
-    bytecode.push_str(&init_code);
-    bytecode.push_str(&runtime_bytecode);
+    creation_bytecode.clear();
+    creation_bytecode.push_str(&init_code);
+    creation_bytecode.push_str(&runtime_bytecode);
 
     // 4) update runtime length in the initcode
-    update_init_push(bytecode, &runtime_bytecode);
+    update_runtime_offset(creation_bytecode, &runtime_bytecode);
     // println!("{}",bytecode);
 }

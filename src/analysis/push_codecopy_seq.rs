@@ -6,7 +6,7 @@ use crate::helper::bytecode::{get_instruction_at_index, get_last_instruction_pos
 Find PUSHx -> x1 -> x2 -> x3 -> CODECOPY sequence and return index of push to modify
 */
 
-pub fn update_init_push(creation_code: &mut String, runtime_bytecode: &String) {
+pub fn update_runtime_offset(creation_code: &mut String, runtime_bytecode: &String) {
     let (push_index, push_instruction) = get_push_codecopy_index(creation_code).unwrap();
     let updated_push_val = calculate_runtime_offset(runtime_bytecode) + 1;
 
