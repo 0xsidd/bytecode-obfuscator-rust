@@ -23,16 +23,18 @@ pub fn obfuscate(creation_bytecode: &mut String, max_iterations: usize) {
     rm_zero_x(creation_bytecode);
 
     // 1) seperate init code and runtime code
-    let (init_code, mut runtime_bytecode) =
-        seperate_bytecode(&creation_bytecode).unwrap_or_else(|| (String::new(), creation_bytecode.clone()));
+    let (init_code, mut runtime_bytecode) = seperate_bytecode(&creation_bytecode)
+        .unwrap_or_else(|| (String::new(), creation_bytecode.clone()));
 
+    println!("Initcode and Runtime bytecode seperated");
     // 2) Get all PUSH-JUMP sequence
     let push_jump_seq: Vec<PushPositions> = find_jump_seq(&runtime_bytecode.clone());
 
     // 3) For each sequence, change the push's param to the newly added JUPDEST's instruction position
     // iterate over all the push-jump seq
 
-    for push_jump in push_jump_seq.iter().take(max_iterations) {
+    for (index, push_jump) in push_jump_seq.iter().enumerate().take(max_iterations) {
+        println!("Obfuscating iteration: {}", index + 1);
         // 3a) Append JUMPDEST at the end
 
         // Append jumpdest at the end of the bytecode
@@ -70,6 +72,8 @@ pub fn obfuscate(creation_bytecode: &mut String, max_iterations: usize) {
     creation_bytecode.push_str(&runtime_bytecode);
 
     // 4) update runtime length in the initcode
+    println!("Updating runtime offset in initcode");
     update_runtime_offset(creation_bytecode, &runtime_bytecode);
+    println!("Updated runtime offset in initcode");
     // println!("{}",bytecode);
 }
